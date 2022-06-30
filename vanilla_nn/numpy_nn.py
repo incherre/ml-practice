@@ -1,5 +1,6 @@
 '''An implementation of a vanilla neural network using numpy.'''
 import numpy as np
+import os
 
 def relu(x, d = False):
     '''ReLU activation function.'''
@@ -123,16 +124,27 @@ def train(inputs, labels, nn, epochs = 2000, learning_rate = 0.1, loss_function 
         
 
 if __name__ == '__main__':
-    inputs = np.array([[-0.5, 0, 1   , 2],
-                       [0   , 1, -0.5, 0]])
-    labels = np.array([[1   , 1, 0   , 0]])
+    train_path = os.path.abspath(os.path.join(".", "data", "train.csv"))
+    train_data = np.genfromtxt(train_path, delimiter=',')
+    train_inputs = train_data[:,:-1].transpose()
+    train_labels = train_data[:,-1:].transpose()
 
     nn = init_nn(2, 3, 1, 1)
-    print('nn init:', nn)
-
-    loss_history = train(inputs, labels, nn)
-    print('nn trained:', nn)
-    print()
+    loss_history = train(train_inputs, train_labels, nn)
     print('loss:', loss_history[::100])
-    print()
-    print(predict(inputs, nn))
+
+    test_path = os.path.abspath(os.path.join(".", "data", "test.csv"))
+    test_data = np.genfromtxt(test_path, delimiter=',')
+    test_inputs = test_data[:,:-1].transpose()
+    test_labels = test_data[:,-1:].transpose()
+    test_predictions = forward_pass(test_inputs, nn)[-1][1]
+    tp = sum([1 for i in range(len(test_labels[0]))
+              if test_labels[0][i] >= 0.5 and test_predictions[0][i] >= 0.5])
+    fp = sum([1 for i in range(len(test_labels[0]))
+              if test_labels[0][i] < 0.5 and test_predictions[0][i] >= 0.5])
+    tn = sum([1 for i in range(len(test_labels[0]))
+              if test_labels[0][i] < 0.5 and test_predictions[0][i] < 0.5])
+    fn = sum([1 for i in range(len(test_labels[0]))
+              if test_labels[0][i] >= 0.5 and test_predictions[0][i] < 0.5])
+    print('accuracy:', tp / (tp + fp))
+    print('recall:', tp / (tp + fn))
