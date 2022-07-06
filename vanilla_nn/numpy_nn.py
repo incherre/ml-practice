@@ -121,7 +121,6 @@ def train(inputs, labels, nn, epochs = 2000, learning_rate = 0.1, loss_function 
         update_nn(nn, gradient, learning_rate = learning_rate)
 
     return loss_history
-        
 
 if __name__ == '__main__':
     train_path = os.path.abspath(os.path.join(".", "data", "train.csv"))
