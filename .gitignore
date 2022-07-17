@@ -128,5 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Dont try to check in data
+# Dont try to check in data or models
 */data/*
+*/models/*
