@@ -65,7 +65,7 @@ def get_model(hidden_layers, hidden_layer_size):
 
     return model
 
-epochs = 550
+epochs = 60
 hidden_layers = 10
 hidden_layer_size = 512
 threshold = 0.5
@@ -84,6 +84,7 @@ history = model.fit(train_data,
                     epochs=epochs,
                     batch_size=512,
                     validation_data=(test_data, test_labels),
+                    class_weight={0: 0.01, 1: 0.99},
                     verbose=1)
 
 results = model.evaluate(test_data, test_labels, verbose=1)
