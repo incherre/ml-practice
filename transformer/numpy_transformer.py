@@ -97,8 +97,10 @@ class MultiHeadAttention:
         return self.final_weights @ pre_linear_output
 
 class SelfAttention(MultiHeadAttention):
-    def __init__(self, embedding_size, sequence_length, num_heads, query_weights, key_weights, value_weights, final_weights):
-        super().__init__(embedding_size, sequence_length, num_heads, query_weights, key_weights, value_weights, final_weights)
+    def __init__(self, embedding_size, sequence_length, num_heads,
+                 query_weights, key_weights, value_weights, final_weights):
+        super().__init__(embedding_size, sequence_length, num_heads,
+                         query_weights, key_weights, value_weights, final_weights)
 
     def forward(self, input_activations):
         return self.multi_head_attention(input_activations, input_activations, input_activations)
@@ -128,7 +130,7 @@ class Encoder:
                 [init_rand(head_size, head_size) for i in range(num_heads)],
                 init_rand(layer_size, layer_size))
             feedforward_sublayer = FeedForward(init_rand(layer_size, layer_size), init_rand(layer_size, 1))
-        self.layers.append(EncoderLayer(attention_sublayer, feedforward_sublayer))
+            self.layers.append(EncoderLayer(attention_sublayer, feedforward_sublayer))
 
     def forward(self, input_activations):
         temp_activations = input_activations
@@ -136,13 +138,77 @@ class Encoder:
             temp_activations = layer.forward(temp_activations)
         return temp_activations
 
+class MaskedSelfAttention(MultiHeadAttention):
+    def __init__(self, embedding_size, sequence_length, num_heads,
+                 query_weights, key_weights, value_weights, final_weights):
+        super().__init__(embedding_size, sequence_length, num_heads,
+                         query_weights, key_weights, value_weights, final_weights)
+        self.mask = np.tril(np.ones((sequence_length, sequence_length)))
+
+    def forward(self, input_activations):
+        return self.multi_head_attention(input_activations, input_activations,
+                                         input_activations, mask = self.mask)
+
+class EmbeddingAttention(MultiHeadAttention):
+    def __init__(self, embedding_size, sequence_length, num_heads,
+                 query_weights, key_weights, value_weights, final_weights):
+        super().__init__(embedding_size, sequence_length, num_heads,
+                         query_weights, key_weights, value_weights, final_weights)
+        self.embedding = None
+        self.expected_embedding_shape = (None, embedding_size, sequence_length)
+
+    def forward(self, input_activations):
+        assert(self.embedding is not None)
+        assert(self.embedding.shape[0] == input_activations.shape[0])
+        return self.multi_head_attention(self.embedding, self.embedding,
+                                         input_activations)
+
+    def set_embedding(self, embedding):
+        assert(self.expected_embedding_shape[1] == embedding.shape[1])
+        assert(self.expected_embedding_shape[2] == embedding.shape[2])
+        self.embedding = embedding
+
 class DecoderLayer:
-    def __init__(self):
-        pass
+    def __init__(self, masked_attention_sublayer, embedding_sublayer, feedforward_sublayer):
+        self.masked_attention_sublayer = AddAndNorm(masked_attention_sublayer)
+        self.embedding_sublayer_internal_access = embedding_sublayer
+        self.embedding_sublayer = AddAndNorm(embedding_sublayer)
+        self.feedforward_sublayer = AddAndNorm(feedforward_sublayer)
+
+    def forward(self, embedding, input_activations):
+        self.embedding_sublayer_internal_access.set_embedding(embedding)
+        return self.feedforward_sublayer.forward(
+            self.embedding_sublayer.forward(
+                self.masked_attention_sublayer.forward(
+                    input_activations)))
 
 class Decoder:
-    def __init__(self):
-        pass
+    def __init__(self, num_layers, layer_size, sequence_length, num_heads):
+        assert(layer_size % num_heads == 0)
+        head_size = layer_size // num_heads
+
+        self.layers = []
+        for i in range(num_layers):
+            masked_attention_sublayer = MaskedSelfAttention(
+                layer_size, sequence_length, num_heads,
+                [init_rand(head_size, head_size) for i in range(num_heads)],
+                [init_rand(head_size, head_size) for i in range(num_heads)],
+                [init_rand(head_size, head_size) for i in range(num_heads)],
+                init_rand(layer_size, layer_size))
+            embedding_sublayer = EmbeddingAttention(
+                layer_size, sequence_length, num_heads,
+                [init_rand(head_size, head_size) for i in range(num_heads)],
+                [init_rand(head_size, head_size) for i in range(num_heads)],
+                [init_rand(head_size, head_size) for i in range(num_heads)],
+                init_rand(layer_size, layer_size))
+            feedforward_sublayer = FeedForward(init_rand(layer_size, layer_size), init_rand(layer_size, 1))
+            self.layers.append(DecoderLayer(masked_attention_sublayer, embedding_sublayer, feedforward_sublayer))
+
+    def forward(self, embedding, input_activations):
+        temp_activations = input_activations
+        for layer in self.layers:
+            temp_activations = layer.forward(embedding, temp_activations)
+        return temp_activations
 
 if __name__ == '__main__':
     attention_sublayer = SelfAttention(
@@ -178,3 +244,13 @@ if __name__ == '__main__':
 
     test_encoder = Encoder(3, 8, 4, 2)
     print(test_encoder.forward(test_input))
+
+    masked_attention_sublayer = MaskedSelfAttention(
+        8, 4, 2, [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], np.eye(8))
+    embedding_sublayer = EmbeddingAttention(
+        8, 4, 2, [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], np.eye(8))
+    test_decoder_layer = DecoderLayer(masked_attention_sublayer, embedding_sublayer, feedforward_sublayer)
+    print(test_decoder_layer.forward(test_embedding, test_input))
+
+    test_decoder = Decoder(3, 8, 4, 2)
+    print(test_decoder.forward(test_embedding, test_input))
