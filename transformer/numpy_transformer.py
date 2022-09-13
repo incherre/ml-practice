@@ -13,14 +13,21 @@ def relu(x, d = False):
     return x * (x > 0)
 
 class FeedForward:
-    def __init__(self, weights, biases, activation_function=relu):
-        self.weights = weights
-        self.biases = biases
+    def __init__(self, weights1, biases1, weights2, biases2, activation_function=relu):
+        assert(weights1.shape[0] == weights2.shape[1])
+        assert(weights1.shape[1] == weights2.shape[0])
+        assert(biases1.shape == (weights1.shape[0], 1))
+        assert(biases2.shape == (weights2.shape[0], 1))
+        self.weights1 = weights1
+        self.biases1 = biases1
         self.activation_function = activation_function
+        self.weights2 = weights2
+        self.biases2 = biases2
 
     def forward(self, input_activations):
-        linear_part = (self.weights @ input_activations) + self.biases
-        return self.activation_function(linear_part)
+        linear_part = (self.weights1 @ input_activations) + self.biases1
+        hidden_activations = self.activation_function(linear_part)
+        return (self.weights2 @ hidden_activations) + self.biases2
 
 class AddAndNorm:
     def __init__(self, wrapped_layer, nudge = 1e-7):
@@ -117,7 +124,7 @@ def init_rand(output_width, input_width, mag = 0.1):
     return (np.random.rand(output_width, input_width) * mag * 2) - mag
 
 class Encoder:
-    def __init__(self, num_layers, layer_size, sequence_length, num_heads):
+    def __init__(self, num_layers, layer_size, hidden_layer_size, sequence_length, num_heads):
         assert(layer_size % num_heads == 0)
         head_size = layer_size // num_heads
 
@@ -129,7 +136,10 @@ class Encoder:
                 [init_rand(head_size, head_size) for i in range(num_heads)],
                 [init_rand(head_size, head_size) for i in range(num_heads)],
                 init_rand(layer_size, layer_size))
-            feedforward_sublayer = FeedForward(init_rand(layer_size, layer_size), init_rand(layer_size, 1))
+            feedforward_sublayer = FeedForward(init_rand(hidden_layer_size, layer_size),
+                                               init_rand(hidden_layer_size, 1),
+                                               init_rand(layer_size, hidden_layer_size),
+                                               init_rand(layer_size, 1))
             self.layers.append(EncoderLayer(attention_sublayer, feedforward_sublayer))
 
     def forward(self, input_activations):
@@ -183,7 +193,7 @@ class DecoderLayer:
                     input_activations)))
 
 class Decoder:
-    def __init__(self, num_layers, layer_size, sequence_length, num_heads):
+    def __init__(self, num_layers, layer_size, hidden_layer_size, sequence_length, num_heads):
         assert(layer_size % num_heads == 0)
         head_size = layer_size // num_heads
 
@@ -201,7 +211,10 @@ class Decoder:
                 [init_rand(head_size, head_size) for i in range(num_heads)],
                 [init_rand(head_size, head_size) for i in range(num_heads)],
                 init_rand(layer_size, layer_size))
-            feedforward_sublayer = FeedForward(init_rand(layer_size, layer_size), init_rand(layer_size, 1))
+            feedforward_sublayer = FeedForward(init_rand(hidden_layer_size, layer_size),
+                                               init_rand(hidden_layer_size, 1),
+                                               init_rand(layer_size, hidden_layer_size),
+                                               init_rand(layer_size, 1))
             self.layers.append(DecoderLayer(masked_attention_sublayer, embedding_sublayer, feedforward_sublayer))
 
     def forward(self, embedding, input_activations):
@@ -213,7 +226,7 @@ class Decoder:
 if __name__ == '__main__':
     attention_sublayer = SelfAttention(
         8, 4, 2, [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], np.eye(8))
-    feedforward_sublayer = FeedForward(np.eye(8), np.array([[1], [1], [1], [1], [1], [1], [1], [1]]))
+    feedforward_sublayer = FeedForward(np.eye(8, 16).T, np.ones((16, 1)), np.eye(8, 16), np.ones((8, 1)))
     test_encoder_layer = EncoderLayer(attention_sublayer, feedforward_sublayer)
 
     # Shape here is (batch_size, embedding_size, sequence_length)
@@ -240,9 +253,10 @@ if __name__ == '__main__':
                      [1, 1, 1, 1]])
     print(attention(test_input, test_input, test_input, mask = mask))
 
-    print(test_encoder_layer.forward(test_input))
+    test_embedding = test_encoder_layer.forward(test_input)
+    print(test_embedding)
 
-    test_encoder = Encoder(3, 8, 4, 2)
+    test_encoder = Encoder(3, 8, 16, 4, 2)
     print(test_encoder.forward(test_input))
 
     masked_attention_sublayer = MaskedSelfAttention(
@@ -252,5 +266,5 @@ if __name__ == '__main__':
     test_decoder_layer = DecoderLayer(masked_attention_sublayer, embedding_sublayer, feedforward_sublayer)
     print(test_decoder_layer.forward(test_embedding, test_input))
 
-    test_decoder = Decoder(3, 8, 4, 2)
+    test_decoder = Decoder(3, 8, 16, 4, 2)
     print(test_decoder.forward(test_embedding, test_input))
