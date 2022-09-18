@@ -223,6 +223,26 @@ class Decoder:
             temp_activations = layer.forward(embedding, temp_activations)
         return temp_activations
 
+class PositionalEncodingLayer:
+    def __init__(self, embedding_dimension):
+        self.embedding_dimension = embedding_dimension
+
+    def forward(self, input_activations):
+        sequence_len = input_activations.shape[2]
+        encoding = np.zeros((self.embedding_dimension, sequence_len))
+        for position in range(sequence_len):
+            encoding[:, position] = self.positional_encoding(position)[:, 0]
+        return input_activations + encoding
+
+    def positional_encoding(self, position):
+        encoding = np.zeros((self.embedding_dimension, 1))
+        for dim in range(self.embedding_dimension):
+            if dim % 2 == 0:
+                encoding[dim][0] = np.sin(position / np.power(10000, (dim / self.embedding_dimension)))
+            else:
+                encoding[dim][0] = np.cos(position / np.power(10000, ((dim - 1) / self.embedding_dimension)))
+        return encoding
+
 if __name__ == '__main__':
     attention_sublayer = SelfAttention(
         8, 4, 2, [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], np.eye(8))
@@ -268,3 +288,6 @@ if __name__ == '__main__':
 
     test_decoder = Decoder(3, 8, 16, 4, 2)
     print(test_decoder.forward(test_embedding, test_input))
+
+    test_positional = PositionalEncodingLayer(8)
+    print(test_positional.forward(test_input))
