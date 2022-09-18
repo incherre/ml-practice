@@ -243,51 +243,60 @@ class PositionalEncodingLayer:
                 encoding[dim][0] = np.cos(position / np.power(10000, ((dim - 1) / self.embedding_dimension)))
         return encoding
 
+class Transformer:
+    def __init__(self, vocab, num_layers, embed_dim, hidden_layer_dim, max_length, num_heads):
+        self.vocab = vocab
+        self.vocab_lookup = {}
+        for i, t in enumerate(vocab):
+            self.vocab_lookup[t] = i
+
+        self.embed_dim = embed_dim
+        self.max_length = max_length
+        self.linear_embedding = init_rand(embed_dim, len(vocab))
+        self.positional_encoding = PositionalEncodingLayer(embed_dim)
+        self.encoder = Encoder(num_layers, embed_dim, hidden_layer_dim, max_length, num_heads)
+        self.decoder = Decoder(num_layers, embed_dim, hidden_layer_dim, max_length, num_heads)
+
+    def forward(self, sequences):
+        # sequences is an arraylike of arraylikes of tokens. sequences[batch][position] = token
+        batch_size = len(sequences)
+        input_embeddings = np.zeros((batch_size, self.embed_dim, self.max_length))
+        for batch_num, batch in enumerate(sequences):
+            for token_num, token in enumerate(batch):
+                if token_num >= self.max_length:
+                    continue
+
+                input_embeddings[batch_num, :, token_num] = self.embed_token(token)[:, 0]
+
+        input_embeddings = self.positional_encoding.forward(input_embeddings)
+        input_embeddings = self.encoder.forward(input_embeddings)
+
+        output_tokens = [[] for i in range(batch_size)]
+        output_embeddings = self.positional_encoding.forward(
+            np.zeros((batch_size, self.embed_dim, self.max_length)))
+        for i in range(self.max_length - 1):
+            decoder_output = self.decoder.forward(input_embeddings, output_embeddings)
+            token_probabilities = self.linear_embedding.T @ decoder_output[:, :, i:i+1]
+            token_probabilities = np.exp(token_probabilities) / np.sum(
+                np.exp(token_probabilities), axis=1)[:, :, None]
+            for batch_num in range(batch_size):
+                token = np.random.choice(self.vocab, 1, p=token_probabilities[batch_num, :, 0])[0]
+                output_tokens[batch_num].append(token)
+                output_embeddings[batch_num, :, i+1] += self.embed_token(token)[:, 0]
+
+        return output_tokens
+
+    def embed_token(self, token):
+        assert(token in self.vocab_lookup)
+        onehot = np.zeros((len(self.vocab), 1))
+        onehot[self.vocab_lookup[token]] = 1
+        return self.linear_embedding @ onehot
+        
+
 if __name__ == '__main__':
-    attention_sublayer = SelfAttention(
-        8, 4, 2, [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], np.eye(8))
-    feedforward_sublayer = FeedForward(np.eye(8, 16).T, np.ones((16, 1)), np.eye(8, 16), np.ones((8, 1)))
-    test_encoder_layer = EncoderLayer(attention_sublayer, feedforward_sublayer)
-
-    # Shape here is (batch_size, embedding_size, sequence_length)
-    test_input = np.array([[[1, 3, 1, 0],
-                            [2, 7, 6, 0],
-                            [3, 8, 8, 0],
-                            [4, 3, 4, 0],
-                            [5, 9, 8, 0],
-                            [6, 1, 4, 0],
-                            [7, 8, 9, 0],
-                            [8, 4, 1, 0]],
-                           [[1, 3, 1, 0],
-                            [2, 7, 6, 0],
-                            [3, 8, 8, 0],
-                            [4, 3, 4, 0],
-                            [5, 9, 8, 0],
-                            [6, 1, 4, 0],
-                            [7, 8, 9, 0],
-                            [8, 4, 1, 0]]])
-
-    mask = np.array([[1, 0, 0, 0],
-                     [1, 1, 0, 0],
-                     [1, 1, 1, 0],
-                     [1, 1, 1, 1]])
-    print(attention(test_input, test_input, test_input, mask = mask))
-
-    test_embedding = test_encoder_layer.forward(test_input)
-    print(test_embedding)
-
-    test_encoder = Encoder(3, 8, 16, 4, 2)
-    print(test_encoder.forward(test_input))
-
-    masked_attention_sublayer = MaskedSelfAttention(
-        8, 4, 2, [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], np.eye(8))
-    embedding_sublayer = EmbeddingAttention(
-        8, 4, 2, [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], [np.eye(4), np.eye(4)], np.eye(8))
-    test_decoder_layer = DecoderLayer(masked_attention_sublayer, embedding_sublayer, feedforward_sublayer)
-    print(test_decoder_layer.forward(test_embedding, test_input))
-
-    test_decoder = Decoder(3, 8, 16, 4, 2)
-    print(test_decoder.forward(test_embedding, test_input))
-
-    test_positional = PositionalEncodingLayer(8)
-    print(test_positional.forward(test_input))
+    alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+                't', 'u', 'v', 'w', 'x', 'y', 'z', ' ']
+    test_transformer = Transformer(alphabet, 4, 8, 16, 32, 2)
+    batch_predictions = test_transformer.forward(['hello friend', 'knock knock'])
+    print(''.join(batch_predictions[0]))
+    print(''.join(batch_predictions[1]))
