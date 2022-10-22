@@ -11,19 +11,19 @@ def norm(input_activations, nudge = 1e-7):
     layer_std = tf.math.sqrt(tf.math.reduce_sum(tf.math.pow(input_activations, 2), axis = (1, 2)))
     input_activations = input_activations / (layer_std[:, None, None] + nudge)
 
-    return added_activations
+    return input_activations
 
 def attention(queries, keys, values, mask = None, mask_value = -1e9):
     batch_size = keys.shape[0]
     key_dim = keys.shape[1]
     seq_len = keys.shape[2]
 
-    pre_softmax = (tf.transpose(queries, axes=(0, 2, 1)) @ keys) / tf.math.sqrt(key_dim)
+    pre_softmax = (tf.transpose(queries, perm=(0, 2, 1)) @ keys) / tf.math.sqrt(tf.constant(key_dim, dtype='float32'))
     if mask is not None:
         pre_softmax[:, mask == 0] = mask_value
     post_softmax = tf.math.exp(pre_softmax) / tf.math.reduce_sum(
         tf.math.exp(pre_softmax), axis=2)[:, None, :]
-    return values @ tf.transpose(post_softmax, axes=(0, 2, 1))
+    return values @ tf.transpose(post_softmax, perm=(0, 2, 1))
 
 class MultiHeadAttention(tf.keras.layers.Layer):
     def __init__(self, embedding_size, sequence_length, num_heads, query_weights, key_weights, value_weights, final_weights):
@@ -63,9 +63,8 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         assert(keys.shape == values.shape)
         assert(values.shape[1] == self.embedding_size)
         assert(values.shape[2] == self.sequence_length)
-        num_examples = queries.shape[0]
 
-        pre_linear_output = np.zeros((num_examples, self.embedding_size, self.sequence_length))
+        heads_stack = []
         for head_index in range(self.num_heads):
             lower_head_range = head_index * self.head_size
             upper_head_range = lower_head_range + self.head_size
@@ -74,8 +73,8 @@ class MultiHeadAttention(tf.keras.layers.Layer):
             post_linear_keys = self.key_weights[head_index] @ keys[:, lower_head_range:upper_head_range, :]
             post_linear_values = self.value_weights[head_index] @ values[:, lower_head_range:upper_head_range, :]
 
-            pre_linear_output[:, lower_head_range:upper_head_range, :] = attention(
-                post_linear_queries, post_linear_keys, post_linear_values, mask = mask)
+            heads_stack.append(attention(post_linear_queries, post_linear_keys, post_linear_values, mask = mask))
+        pre_linear_output = tf.concat(heads_stack, axis=1)
         return self.final_weights @ pre_linear_output
 
 class SelfAttention(MultiHeadAttention):
@@ -88,15 +87,52 @@ class SelfAttention(MultiHeadAttention):
         return self.multi_head_attention(inputs, inputs, inputs)
 
 class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, attention_sublayer, feedforward_sublayer):
+    def __init__(self, attention_sublayer, feedforward_sublayer, linear_sublayer):
         super(EncoderLayer, self).__init__()
 
         self.attention_sublayer = attention_sublayer
         self.feedforward_sublayer = feedforward_sublayer
+        self.linear_sublayer = linear_sublayer
 
     def build(self, input_shape):
         pass
 
     def call(self, inputs):
-        post_attention = norm(inputs + self.attention_sublayer.call(inputs))
-        return norm(post_attention + self.feedforward_sublayer.call(post_attention))
+        post_attention = norm(inputs + self.attention_sublayer(inputs))
+
+        tokens_stack = []
+        for i in range(post_attention.shape[2]):
+            tokens_stack.append(self.linear_sublayer(self.feedforward_sublayer(post_attention[:, :, i])))
+        
+        return norm(post_attention + tf.stack(tokens_stack, axis=2))
+
+def init_rand(output_width, input_width, mag = 0.1):
+    return (tf.random.uniform(shape=(output_width, input_width)) * mag * 2) - mag
+
+def add_encoder_stack(model, num_layers, layer_size, hidden_layer_size, sequence_length, num_heads):
+    assert(layer_size % num_heads == 0)
+    head_size = layer_size // num_heads
+
+    for i in range(num_layers):
+        attention_sublayer = SelfAttention(
+            layer_size, sequence_length, num_heads,
+            [init_rand(head_size, head_size) for i in range(num_heads)],
+            [init_rand(head_size, head_size) for i in range(num_heads)],
+            [init_rand(head_size, head_size) for i in range(num_heads)],
+            init_rand(layer_size, layer_size))
+
+        feedforward_sublayer = tf.keras.layers.Dense(hidden_layer_size, activation='relu')
+        linear_sublayer = tf.keras.layers.Dense(layer_size, activation='linear')
+
+        model.add(EncoderLayer(attention_sublayer, feedforward_sublayer, linear_sublayer))
+
+if __name__ == '__main__':
+    alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+                't', 'u', 'v', 'w', 'x', 'y', 'z', ' ']
+    print(alphabet)
+
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.Input(shape=(8, 32)))
+    add_encoder_stack(model, 4, 8, 16, 32, 2)
+    print(model.output_shape)
+
