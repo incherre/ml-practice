@@ -6,3 +6,6 @@ This folder contains three implementations of a plain neural network written usi
 
 ## sentence_classifier
 This folder contains the training recipe for a binary sentence classifier, leveraging the Universal Sentence Encoder from TensorFlow Hub. It deals with an unequal class split by weighting the classes. There is also a tool which mines for samples near the decision boundary of a saved model for future rating; and a tool to rate saved unrated samples.
+
+## transformer
+This folder contains two implementations of the transformer architecture. The first is written using NumPy and is only feed forward because I didn't feel like writing all the training gradient code. The second is in TensorFlow, so is trainable via the magic of automatic differentiation.
