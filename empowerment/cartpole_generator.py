@@ -24,11 +24,12 @@ class CartPoleFrameGen(tf.keras.utils.Sequence):
             action = self.env.action_space.sample()
             observation, reward, terminated, truncated, info = self.env.step(action)
 
-            if terminated or truncated and len(samples) < self.batch_size:
-                samples.append(np.zeros(self.frame_shape))
+            if terminated or truncated:
+                if len(samples) < self.batch_size:
+                    samples.append(np.zeros(self.frame_shape))
                 observation, info = self.env.reset()
 
-        assert(len(samples) == self.batch_size)
+        assert (len(samples) == self.batch_size), 'len(samples) = {}, batch_size = {}'.format(len(samples), self.batch_size)
         samples = np.stack(samples)
         if self.normalize:
             samples = samples / 255
