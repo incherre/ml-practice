@@ -23,9 +23,13 @@ class DenseForward(tf.keras.layers.Layer):
         )
 
 class DenseTied(tf.keras.layers.Layer):
-    def __init__(self, tied_forward_layer):
+    def __init__(self, tied_forward_layer, activation_function = None):
         super(DenseTied, self).__init__()
         self.tied_forward_layer = tied_forward_layer
+        if not activation_function is None:
+            self.activation_function = activation_function
+        else:
+            self.activation_function = tied_forward_layer.activation_function
 
     def build(self, input_shape):
         # This is in build because it depends on the source layer
@@ -35,7 +39,7 @@ class DenseTied(tf.keras.layers.Layer):
             shape=[1, self.tied_forward_layer.nn_weights.shape[0]])
 
     def call(self, inputs):
-        return self.tied_forward_layer.activation_function(
+        return self.activation_function(
             tf.matmul(
                 inputs,
                 self.tied_forward_layer.nn_weights,
@@ -57,8 +61,11 @@ class Autoencoder(tf.keras.Model):
             [tf.keras.layers.Flatten()] + encoder_stack)
 
         decoder_stack = []
-        for enc_layer in reversed(encoder_stack):
+        for enc_layer in reversed(encoder_stack[1:]):
             decoder_stack.append(DenseTied(enc_layer))
+        decoder_stack.append(DenseTied(
+            encoder_stack[0],
+            activation_function = tf.nn.sigmoid))
 
         self.decoder = tf.keras.Sequential(
             decoder_stack + [tf.keras.layers.Reshape(input_shape)])
