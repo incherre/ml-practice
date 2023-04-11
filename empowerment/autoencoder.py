@@ -1,18 +1,23 @@
 import tensorflow as tf
 
 class DenseForward(tf.keras.layers.Layer):
-    def __init__(self, num_outputs, activation_function = tf.nn.relu):
+    def __init__(self, num_outputs,
+                 activation_function = tf.nn.relu,
+                 regularizer = None):
         super(DenseForward, self).__init__()
         self.num_outputs = num_outputs
         self.activation_function = activation_function
+        self.regularizer = regularizer
         self.biases = self.add_weight(
             "biases",
-            shape=[1, self.num_outputs])
+            shape=[1, self.num_outputs],
+            regularizer = self.regularizer)
 
     def build(self, input_shape):
         self.nn_weights = self.add_weight(
             "weights",
-            shape=(int(input_shape[-1]), self.num_outputs))
+            shape=(int(input_shape[-1]), self.num_outputs),
+            regularizer = self.regularizer)
 
     def call(self, inputs):
         return self.activation_function(
@@ -36,7 +41,8 @@ class DenseTied(tf.keras.layers.Layer):
         # being built first.
         self.biases = self.add_weight(
             "biases",
-            shape=[1, self.tied_forward_layer.nn_weights.shape[0]])
+            shape=[1, self.tied_forward_layer.nn_weights.shape[0]],
+            regularizer = self.tied_forward_layer.regularizer)
 
     def call(self, inputs):
         return self.activation_function(
@@ -49,13 +55,15 @@ class DenseTied(tf.keras.layers.Layer):
 
 class Autoencoder(tf.keras.Model):
     def __init__(self, input_shape, latent_dim,
-                 hidden_layers, hidden_dim):
+                 hidden_layers, hidden_dim, regularizer = None):
         super(Autoencoder, self).__init__()
 
         encoder_stack = []
         for i in range(hidden_layers):
-            encoder_stack.append(DenseForward(hidden_dim))
-        encoder_stack.append(DenseForward(latent_dim))
+            encoder_stack.append(DenseForward(hidden_dim,
+                                              regularizer = regularizer))
+        encoder_stack.append(DenseForward(latent_dim,
+                                          regularizer = regularizer))
 
         self.encoder = tf.keras.Sequential(
             [tf.keras.layers.Flatten()] + encoder_stack)
