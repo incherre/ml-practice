@@ -55,7 +55,7 @@ class DenseTied(tf.keras.layers.Layer):
 
 class Autoencoder(tf.keras.Model):
     def __init__(self, input_shape, latent_dim,
-                 hidden_layers, hidden_dim, regularizer = None):
+                 hidden_layers, hidden_dim, regularizer = None, dropout = 0.0):
         super(Autoencoder, self).__init__()
 
         encoder_stack = []
@@ -65,8 +65,10 @@ class Autoencoder(tf.keras.Model):
         encoder_stack.append(DenseForward(latent_dim,
                                           regularizer = regularizer))
 
+        dropout_stack = [tf.keras.layers.Dropout(dropout) for i in range(len(encoder_stack))]
         self.encoder = tf.keras.Sequential(
-            [tf.keras.layers.Flatten()] + encoder_stack)
+            [tf.keras.layers.Flatten()] +
+            [layer for layers in zip(dropout_stack, encoder_stack) for layer in layers])
 
         decoder_stack = []
         for enc_layer in reversed(encoder_stack[1:]):
@@ -75,8 +77,10 @@ class Autoencoder(tf.keras.Model):
             encoder_stack[0],
             activation_function = tf.nn.sigmoid))
 
+        dropout_stack = [tf.keras.layers.Dropout(dropout) for i in range(len(decoder_stack))]
         self.decoder = tf.keras.Sequential(
-            decoder_stack + [tf.keras.layers.Reshape(input_shape)])
+            [layer for layers in zip(dropout_stack, decoder_stack) for layer in layers] +
+            [tf.keras.layers.Reshape(input_shape)])
 
         self.build((None,) + input_shape)
 
