@@ -1,4 +1,7 @@
 import tensorflow as tf
+import numpy as np
+import os
+from PIL import Image
 
 class DenseForward(tf.keras.layers.Layer):
     def __init__(self, num_outputs,
@@ -87,3 +90,22 @@ class Autoencoder(tf.keras.Model):
     def call(self, x):
         encoded = self.encoder(x)
         return self.decoder(encoded)
+
+class SaveImageCallback(tf.keras.callbacks.Callback):
+    '''A callback to save autoencoded images at the end of every epoch.'''
+    def __init__(self, image_sample, save_dir):
+        self.image_sample = image_sample
+        self.save_dir = save_dir
+
+    def on_epoch_end(self, epoch, logs=None):
+        # Don't ruin a training run if something goes wrong here.
+        try:
+            image = Image.fromarray(
+                np.asarray(
+                    self.model(self.image_sample[None, :, :, :])[0] * 255
+                ).astype(np.uint8)
+            )
+            path = os.path.join(self.save_dir, 'epoch_{}.png'.format(epoch))
+            image.save(path)
+        except Exception as e:
+            print(e)
