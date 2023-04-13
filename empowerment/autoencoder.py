@@ -71,7 +71,8 @@ class Autoencoder(tf.keras.Model):
         dropout_stack = [tf.keras.layers.Dropout(dropout) for i in range(len(encoder_stack))]
         self.encoder = tf.keras.Sequential(
             [tf.keras.layers.Flatten()] +
-            [layer for layers in zip(dropout_stack, encoder_stack) for layer in layers])
+            [layer for layers in zip(dropout_stack, encoder_stack) for layer in layers],
+            name = 'encoder')
 
         decoder_stack = []
         for enc_layer in reversed(encoder_stack[1:]):
@@ -83,7 +84,8 @@ class Autoencoder(tf.keras.Model):
         dropout_stack = [tf.keras.layers.Dropout(dropout) for i in range(len(decoder_stack))]
         self.decoder = tf.keras.Sequential(
             [layer for layers in zip(dropout_stack, decoder_stack) for layer in layers] +
-            [tf.keras.layers.Reshape(input_shape)])
+            [tf.keras.layers.Reshape(input_shape)],
+            name = 'decoder')
 
         self.build((None,) + input_shape)
 
