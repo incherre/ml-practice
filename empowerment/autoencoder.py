@@ -57,34 +57,77 @@ class DenseTied(tf.keras.layers.Layer):
         )
 
 class Autoencoder(tf.keras.Model):
-    def __init__(self, input_shape, latent_dim,
-                 hidden_layers, hidden_dim, regularizer = None, dropout = 0.0):
+    def __init__(self, input_shape, latent_dim, hidden_layers,
+                 hidden_dim, convolution_layers, convolution_size,
+                 convolution_filters, regularizer = None, dropout = 0.0):
         super(Autoencoder, self).__init__()
+
+        convolution_stack = []
+        for i in range(convolution_layers):
+            if dropout > 0.0:
+                convolution_stack.append(
+                    tf.keras.layers.SpatialDropout2D(dropout))
+            convolution_stack.append(
+                tf.keras.layers.Conv2D(convolution_filters,
+                                       convolution_size,
+                                       kernel_regularizer = regularizer,
+                                       bias_regularizer = regularizer))
 
         encoder_stack = []
         for i in range(hidden_layers):
             encoder_stack.append(DenseForward(hidden_dim,
-                                              regularizer = regularizer))
+                                              regularizer = regularizer,
+                                              activation_function = tf.nn.relu))
         encoder_stack.append(DenseForward(latent_dim,
-                                          regularizer = regularizer))
+                                          regularizer = regularizer,
+                                          activation_function = tf.nn.sigmoid))
 
-        dropout_stack = [tf.keras.layers.Dropout(dropout) for i in range(len(encoder_stack))]
+        dropout_stack = [tf.keras.layers.Dropout(dropout) for i in range(len(encoder_stack))] if dropout > 0.0 else []
         self.encoder = tf.keras.Sequential(
+            [tf.keras.layers.InputLayer(input_shape = input_shape)] +
+            convolution_stack +
             [tf.keras.layers.Flatten()] +
-            [layer for layers in zip(dropout_stack, encoder_stack) for layer in layers],
+            [layer for layers in zip(dropout_stack, encoder_stack) for layer in layers] if dropout > 0.0 else encoder_stack,
             name = 'encoder')
 
         decoder_stack = []
         for enc_layer in reversed(encoder_stack[1:]):
-            decoder_stack.append(DenseTied(enc_layer))
+            decoder_stack.append(DenseTied(enc_layer,
+                                           activation_function = tf.nn.relu))
+            if dropout > 0.0:
+                decoder_stack.append(tf.keras.layers.Dropout(dropout))
         decoder_stack.append(DenseTied(
             encoder_stack[0],
-            activation_function = tf.nn.sigmoid))
+            activation_function = tf.nn.relu))
 
-        dropout_stack = [tf.keras.layers.Dropout(dropout) for i in range(len(decoder_stack))]
+        conv_edges = convolution_layers * (convolution_size - 1)
+        deconvolution_input_shape = (input_shape[0] - conv_edges, input_shape[1] - conv_edges , convolution_filters)
+
+        deconvolution_stack = []
+        for i in range(convolution_layers - 1):
+            if dropout > 0.0:
+                deconvolution_stack.append(
+                    tf.keras.layers.SpatialDropout2D(dropout))
+            deconvolution_stack.append(
+                tf.keras.layers.Conv2DTranspose(convolution_filters,
+                                                convolution_size,
+                                                kernel_regularizer = regularizer,
+                                                bias_regularizer = regularizer))
+        if convolution_layers >= 1:
+            if dropout > 0.0:
+                deconvolution_stack.append(
+                    tf.keras.layers.SpatialDropout2D(dropout))
+            deconvolution_stack.append(
+                tf.keras.layers.Conv2DTranspose(input_shape[2],
+                                                convolution_size,
+                                                activation = tf.nn.sigmoid,
+                                                kernel_regularizer = regularizer,
+                                                bias_regularizer = regularizer))
+
         self.decoder = tf.keras.Sequential(
-            [layer for layers in zip(dropout_stack, decoder_stack) for layer in layers] +
-            [tf.keras.layers.Reshape(input_shape)],
+            decoder_stack +
+            [tf.keras.layers.Reshape(deconvolution_input_shape)] +
+            deconvolution_stack,
             name = 'decoder')
 
         self.build((None,) + input_shape)
