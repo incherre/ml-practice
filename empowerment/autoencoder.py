@@ -101,7 +101,9 @@ class Autoencoder(tf.keras.Model):
             activation_function = tf.nn.relu))
 
         conv_edges = convolution_layers * (convolution_size - 1)
-        deconvolution_input_shape = (input_shape[0] - conv_edges, input_shape[1] - conv_edges , convolution_filters)
+        deconvolution_input_shape = (input_shape[0] - conv_edges,
+                                     input_shape[1] - conv_edges,
+                                     convolution_filters if convolution_layers > 0 else input_shape[2])
 
         deconvolution_stack = []
         for i in range(convolution_layers - 1):
