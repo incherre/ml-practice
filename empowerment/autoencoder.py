@@ -87,7 +87,7 @@ class Autoencoder(tf.keras.Model):
             [tf.keras.layers.InputLayer(input_shape = input_shape)] +
             convolution_stack +
             [tf.keras.layers.Flatten()] +
-            [layer for layers in zip(dropout_stack, encoder_stack) for layer in layers] if dropout > 0.0 else encoder_stack,
+            ([layer for layers in zip(dropout_stack, encoder_stack) for layer in layers] if dropout > 0.0 else encoder_stack),
             name = 'encoder')
 
         decoder_stack = []
