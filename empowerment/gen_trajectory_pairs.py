@@ -8,7 +8,7 @@ output_out_path = os.path.abspath(os.path.join('.', 'data', 'result.npy'))
 num_samples = 1000
 
 model_save_path = os.path.abspath(
-    os.path.join('.', 'models', 'autoencoder_L0024'))
+    os.path.join('.', 'models', 'autoencoder_L0017'))
 model = tf.keras.models.load_model(model_save_path)
 model.encoder.summary()
 
@@ -19,7 +19,7 @@ outputs = []
 print('Generating...')
 observation, info = env.reset()
 sample_shape = env.render().shape
-last = model.encoder(env.render()[None, :, :, :])
+last = model.encoder(env.render()[None, :, :, :] / 255)
 while len(inputs) < num_samples:
     if num_samples > 100 and len(inputs) % (num_samples // 100) == 0:
         print(len(inputs))
@@ -39,10 +39,10 @@ while len(inputs) < num_samples:
         outputs.append(last)
 
         observation, info = env.reset()  # Reborn
-        last = model.encoder(env.render()[None, :, :, :])
+        last = model.encoder(env.render()[None, :, :, :] / 255)
     else:
         inputs.append(np.concatenate((action_vector, last), axis = 1))
-        last = model.encoder(env.render()[None, :, :, :])
+        last = model.encoder(env.render()[None, :, :, :] / 255)
         outputs.append(last)
 
 assert len(inputs) == len(outputs)
