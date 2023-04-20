@@ -44,19 +44,20 @@ def model_builder(hp):
     model.compile(
         optimizer = tf.keras.optimizers.Adam(
             learning_rate=hp_learning_rate),
-        loss = tf.keras.losses.MeanSquaredError(),
-        metrics = [tf.keras.metrics.MeanSquaredError()])
+        loss = tf.keras.losses.MeanSquaredLogarithmicError(),
+        metrics = [tf.keras.metrics.MeanSquaredError(),  # val_mean_squared_error
+                   tf.keras.losses.MeanSquaredLogarithmicError()])  # val_mean_squared_logarithmic_error
 
     return model
 
 tuner = kt.Hyperband(model_builder,
-                     objective = 'val_mean_squared_error',
+                     objective = 'val_mean_squared_logarithmic_error',
                      max_epochs = 10,
                      factor = 3,
                      hyperband_iterations = 2,
                      directory = os.path.abspath(
                          os.path.join('.', 'models')),
-                     project_name = 'emp_auto')
+                     project_name = 'emp_auto_2')
 
 try:
     tuner.search(
@@ -65,11 +66,12 @@ try:
         validation_data = (val_data, val_data),
         callbacks = [
             tf.keras.callbacks.ReduceLROnPlateau(
-                monitor = 'val_mean_squared_error'),
+                monitor = 'val_mean_squared_logarithmic_error',
+                patience = 2),
             tf.keras.callbacks.EarlyStopping(
-                monitor = 'val_mean_squared_error',
+                monitor = 'val_mean_squared_logarithmic_error',
                 min_delta = 0.0001,
-                patience = 20,
+                patience = 4,
                 restore_best_weights = True)])
 
     best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
@@ -77,18 +79,19 @@ try:
 
     autoencoder_model = tuner.hypermodel.build(best_hps)
     history = autoencoder_model.fit(
-        cartpole_generator.CartPoleFrameGen(100),
+        cartpole_generator.CartPoleFrameGen(50),
         epochs = 1000,
         validation_data = (val_data, val_data),
         callbacks = [
             autoencoder.SaveImageCallback(
                 val_data[0], image_save_path),
             tf.keras.callbacks.ReduceLROnPlateau(
-                monitor = 'val_mean_squared_error'),
+                monitor = 'val_mean_squared_logarithmic_error',
+                patience = 2),
             tf.keras.callbacks.EarlyStopping(
-                monitor = 'val_mean_squared_error',
+                monitor = 'val_mean_squared_logarithmic_error',
                 min_delta = 0.0001,
-                patience = 20,
+                patience = 4,
                 restore_best_weights = True)],)
 
 except Exception as e:
