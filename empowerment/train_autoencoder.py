@@ -16,6 +16,16 @@ val_path = os.path.abspath(
     os.path.join('.', 'data', 'rand_trajectories.npy'))
 val_data = np.load(val_path)[:128, :, :, :] / 255
 
+hp_names = [
+    'hidden_layers',
+    'hidden_dim',
+    'convolution_layers',
+    'convolution_size',
+    'convolution_filters',
+    'reg_l2',
+    'dropout',
+    'learning_rate']
+
 def model_builder(hp):
     hp_hidden_layers = hp.Int(
         'hidden_layers', min_value=0, max_value=32, step=4)
@@ -67,15 +77,16 @@ try:
         callbacks = [
             tf.keras.callbacks.ReduceLROnPlateau(
                 monitor = 'val_mean_squared_logarithmic_error',
-                patience = 2),
+                patience = 4),
             tf.keras.callbacks.EarlyStopping(
                 monitor = 'val_mean_squared_logarithmic_error',
                 min_delta = 0.0001,
-                patience = 4,
+                patience = 8,
                 restore_best_weights = True)])
 
     best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-    print(best_hps)
+    for hp_name in hp_names:
+        print('{}: {}'.format(hp_name, best_hps.get(hp_name)))
 
     autoencoder_model = tuner.hypermodel.build(best_hps)
     history = autoencoder_model.fit(
@@ -87,11 +98,11 @@ try:
                 val_data[0], image_save_path),
             tf.keras.callbacks.ReduceLROnPlateau(
                 monitor = 'val_mean_squared_logarithmic_error',
-                patience = 2),
+                patience = 4),
             tf.keras.callbacks.EarlyStopping(
                 monitor = 'val_mean_squared_logarithmic_error',
                 min_delta = 0.0001,
-                patience = 4,
+                patience = 8,
                 restore_best_weights = True)],)
 
 except Exception as e:
