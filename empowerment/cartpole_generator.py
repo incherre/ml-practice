@@ -37,6 +37,9 @@ class CartPoleFrameGen(tf.keras.utils.Sequence):
 
         return samples, samples
 
+    def __len__(self):
+        return self.num_batches
+
 class CartPoleStepGen(tf.keras.utils.Sequence):
     def __init__(self, num_batches, model, batch_size = 32, normalize = True):
         self.num_batches = num_batches
