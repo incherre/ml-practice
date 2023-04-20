@@ -46,7 +46,7 @@ def model_builder(hp):
             learning_rate=hp_learning_rate),
         loss = tf.keras.losses.MeanSquaredLogarithmicError(),
         metrics = [tf.keras.metrics.MeanSquaredError(),  # val_mean_squared_error
-                   tf.keras.losses.MeanSquaredLogarithmicError()])  # val_mean_squared_logarithmic_error
+                   tf.keras.metrics.MeanSquaredLogarithmicError()])  # val_mean_squared_logarithmic_error
 
     return model
 
