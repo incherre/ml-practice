@@ -8,7 +8,7 @@ output_out_path = os.path.abspath(os.path.join('.', 'data', 'result.npy'))
 num_samples = 1000
 
 model_save_path = os.path.abspath(
-    os.path.join('.', 'models', 'autoencoder_L0024'))
+    os.path.join('.', 'models', 'autoencoder_L0322'))
 model = tf.keras.models.load_model(model_save_path)
 model.encoder.summary()
 
