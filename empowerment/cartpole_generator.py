@@ -41,11 +41,11 @@ class CartPoleFrameGen(tf.keras.utils.Sequence):
         return self.num_batches
 
 class CartPoleStepGen(tf.keras.utils.Sequence):
-    def __init__(self, num_batches, model, batch_size = 32, normalize = True):
+    def __init__(self, num_batches, encoder_model, batch_size = 32, normalize = True):
         self.num_batches = num_batches
         self.batch_size = batch_size
         self.normalize = normalize
-        self.model = model
+        self.encoder_model = encoder_model
 
         self.env = gym.make('CartPole-v1', render_mode='rgb_array')
         self.env.reset()
@@ -54,11 +54,11 @@ class CartPoleStepGen(tf.keras.utils.Sequence):
 
     def get_frame_embedding(self, frame = None):
         if not frame is None:
-            return self.model.encoder(
+            return self.encoder_model(
                 frame[None, :, :, :] / (
                     255 if self.normalize else 1))[0]
 
-        return self.model.encoder(
+        return self.encoder_model(
             self.env.render()[None, :, :, :] / (
                 255 if self.normalize else 1))[0]
 
@@ -102,6 +102,6 @@ class CartPoleStepGen(tf.keras.utils.Sequence):
 
 if __name__ == '__main__':
     cpfg = CartPoleStepGen(10, tf.keras.models.load_model(os.path.abspath(
-        os.path.join('.', 'models', 'autoencoder_L0024'))))
+        os.path.join('.', 'models', 'autoencoder_L0024'))).encoder)
     print(cpfg.__len__())
     print(cpfg.__getitem__(0))
