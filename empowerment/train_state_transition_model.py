@@ -90,8 +90,8 @@ try:
     for hp_name in hp_names:
         print('{}: {}'.format(hp_name, best_hps.get(hp_name)))
 
-    autoencoder_model = tuner.hypermodel.build(best_hps)
-    history = autoencoder_model.fit(
+    state_transition_model = tuner.hypermodel.build(best_hps)
+    history = state_transition_model.fit(
         cartpole_generator.CartPoleStepGen(50, autoencoder_model.encoder),
         epochs = 1000,
         validation_data = (val_data_x, val_data_y),
@@ -111,6 +111,6 @@ except Exception as e:
 save_model = input('Save model? (y/n)')
 if save_model.strip().lower()[0] == 'y':
     print('Saving...')
-    autoencoder_model.save(model_save_path)
+    state_transition_model.save(model_save_path)
 else:
     print('Not saving.')
