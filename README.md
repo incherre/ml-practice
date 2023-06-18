@@ -1,6 +1,9 @@
 # ml-practice
 Practice implementing various ML models to gain familiarity with them and the frameworks used.
 
+## ai_alignment_fundamentals
+My answers to the exercises and occasionally the discussion prompts from the [AI Safety Fundamentals' Alignment Course](https://aisafetyfundamentals.com/ai-alignment-curriculum), Spring 2022 edition. The most recent update (Feb 2023) to the course does not seem to have exercises anymore.
+
 ## transformer
 This folder contains two implementations of the transformer architecture. The first is written using NumPy and is only feed forward because I didn't feel like writing all the training gradient code. The second is in TensorFlow, so is trainable via the magic of automatic differentiation.
 
