@@ -1,0 +1,23 @@
+# Week 5
+## Question 1
+Wu et al. (2021) use a combination of behavioural cloning and reinforcement learning to train a summarisation model; this combination was also used to train AlphaGo and AlphaStar. Explain why that's better than using either by itself.
+### My original answer
+Earlier in training, demonstrations are more efficient to learn from, but later comparisons and demonstrations become equal, and even later comparisons become even more useful than demonstrations. Furthermore, comparisons are cheaper to collect. Intuitively, I think that examples convey more information when the task is completely unknown, but comparisons can allow the system to surpass what labelers can do and reach what labelers can judge.
+### Answer co-written with an LLM
+The combination of behavioral cloning and reinforcement learning, as utilized by Wu et al. (2021) and also employed in training AlphaGo and AlphaStar, offers advantages over using either approach individually. Here's why:
+1. Efficient early learning: Behavioral cloning, which involves learning from demonstrations, is more efficient during the initial stages of training when the task is relatively unknown. Demonstrations provide valuable examples and convey useful information.
+1. Enhanced learning with comparisons: As training progresses, comparisons between different summaries become equally or even more informative than demonstrations. Comparisons offer a more cost-effective way to collect data and can help the system surpass the capabilities of human labelers, reaching a level that labelers can effectively judge.
+
+By combining behavioral cloning and reinforcement learning, the model benefits from the efficient early learning provided by demonstrations and the increased learning capacity achieved through comparisons. This combination allows for a more effective and comprehensive training process.
+## Question 2
+A complex task like running a factory can be broken down into subtasks in a fairly straightforward way, allowing a large team of workers to perform much better than even an exceptionally talented individual. Describe a task where teams have much less of an advantage over the best individuals. Why doesn't your task benefit as much from being broken down into subtasks? How might we change that?
+### My original answer
+Driving a car does not benefit much from teamwork, largely because it involves many extremely time sensitive perception and control tasks. There are some ways that teamwork can help: for instance having someone to manage the GPS, or when the driver asks someone on the passenger side "How close am I to the curb?" while parking, or perhaps a passenger might notice a hazard that the driver missed. Breaking down a task like this into subtasks is difficult, but many of the auxiliary functions of driving could be separated (GPS, music control, headlights, wipers, etc.) Also, teamwork could have a greater role if there was more time for the agents to operate, or if there was a greater communication bandwidth between separate vehicles, either of which could be made to happen via automation.
+### Answer co-written with an LLM
+Driving a car is a task that does not benefit significantly from teamwork, primarily due to its time-sensitive nature and the requirement for real-time perception and control. While there are certain aspects where teamwork can help, such as GPS management or a passenger providing assistance during parking, the core driving tasks heavily rely on individual performance.
+
+The difficulty in breaking down driving into subtasks lies in the seamless integration of time-sensitive perception and control. However, auxiliary functions like GPS, music control, headlights, and wipers can be separated into subtasks. To enhance the role of teamwork in driving, two potential approaches could be considered:
+1. Increased time for operations: Allowing more time for agents to operate, such as in semi-automated or autonomous driving modes, could enable better coordination between multiple agents, enhancing the benefits of teamwork.
+1. Improved communication and automation: Greater communication bandwidth between separate vehicles or enhanced automation could facilitate better coordination and collaboration among drivers, leading to improved team-based performance.
+
+By exploring these avenues, we can potentially increase the advantages of teamwork in driving, even though the core driving tasks heavily rely on individual performance.
