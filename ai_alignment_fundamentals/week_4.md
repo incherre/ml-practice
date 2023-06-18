@@ -1,4 +1,4 @@
-# Week 3
+# Week 4
 ## Question 1
 Imagine using reward modelling, as described in the second reading from this week, to train an AI to perform a complex task like building a castle in Minecraft. What sort of problems would you encounter?
 ### My original answer
