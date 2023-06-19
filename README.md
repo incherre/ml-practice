@@ -1,6 +1,9 @@
 # ml-practice
 Practice implementing various ML models to gain familiarity with them and the frameworks used.
 
+## empowerment
+An experiment in which I train an RL agent to optimize its own empowerment, estimated from raw frames of pixels. It is loosely inspired by the paper [Assistance via Empowerment](https://arxiv.org/abs/2006.14796).
+
 ## ai_alignment_fundamentals
 My answers to the exercises and occasionally the discussion prompts from the [AI Safety Fundamentals' Alignment Course](https://aisafetyfundamentals.com/ai-alignment-curriculum), Spring 2022 edition. The most recent update (Feb 2023) to the course does not seem to have exercises anymore.
 
