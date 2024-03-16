@@ -15,7 +15,7 @@ class CartPoleFrameGen(tf.keras.utils.Sequence):
 
     def on_epoch_end(self):
         pass
-    
+
     def __getitem__(self, index):
         samples = []
 
@@ -96,7 +96,7 @@ class CartPoleStepGen(tf.keras.utils.Sequence):
         assert len(inputs) == len(outputs)
 
         return np.stack(inputs), np.stack(outputs)
-    
+
     def __len__(self):
         return self.num_batches
 

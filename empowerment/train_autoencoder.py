@@ -67,7 +67,7 @@ tuner = kt.Hyperband(model_builder,
                      hyperband_iterations = 2,
                      directory = os.path.abspath(
                          os.path.join('.', 'models')),
-                     project_name = 'emp_auto_2')
+                     project_name = 'emp_auto_3')
 
 try:
     tuner.search(
