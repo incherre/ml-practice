@@ -7,7 +7,7 @@ import cartpole_generator
 
 model_save_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), 'models',
-                 'combined_state_transition_model'))
+                 'combined_state_transition_model.keras'))
 
 image_save_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), 'data',
