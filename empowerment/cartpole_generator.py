@@ -100,8 +100,74 @@ class CartPoleStepGen(tf.keras.utils.Sequence):
     def __len__(self):
         return self.num_batches
 
+class CartPoleCombinedGen(tf.keras.utils.Sequence):
+    def __init__(self, num_batches, batch_size = 32, normalize = True):
+        super(CartPoleCombinedGen, self).__init__()
+        self.num_batches = num_batches
+        self.batch_size = batch_size
+        self.normalize = normalize
+
+        self.env = gym.make('CartPole-v1', render_mode='rgb_array')
+        self.env.reset()
+        self.frame_shape = self.env.render().shape
+        self.last = self.get_frame()
+
+    def on_epoch_end(self):
+        pass
+
+    def get_frame(self):
+        return self.env.render() / (
+            255 if self.normalize else 1)
+
+    def __getitem__(self, index):
+        input_images = []
+        input_actions = []
+        outputs = []
+
+        while len(input_images) < self.batch_size:
+            action = self.env.action_space.sample()
+            action_vector = np.zeros(self.env.action_space.n)
+            action_vector[action] = 1.0
+
+            observation, reward, terminated, truncated, info = self.env.step(action)
+            if terminated or truncated:
+                input_images.append(self.last)
+                input_actions.append(action_vector)
+                new_frame = np.zeros(self.frame_shape)  # "Death"
+                outputs.append(np.stack([self.last, new_frame],
+                                        axis = 0))
+                self.last = new_frame
+
+                if len(input_images) < self.batch_size:
+                    input_images.append(self.last)
+                    input_actions.append(action_vector)
+                    # "Death" transitions to more "death"
+                    outputs.append(np.stack([self.last, self.last],
+                                            axis = 0))
+
+                observation, info = self.env.reset()  # Reborn
+                self.last = self.get_frame()
+            else:
+                input_images.append(self.last)
+                input_actions.append(action_vector)
+                new_frame = self.get_frame()
+                outputs.append(np.stack([self.last, new_frame],
+                                        axis = 0))
+                self.last = new_frame
+
+        assert(len(input_images) == self.batch_size),'len(samples) = {}, batch_size = {}'.format(
+                len(samples), self.batch_size)
+        assert(len(input_images) == len(input_actions))
+        assert(len(input_images) == len(outputs))
+
+        return (np.stack(input_images), np.stack(input_actions)), np.stack(outputs)
+
+    def __len__(self):
+        return self.num_batches
+
 if __name__ == '__main__':
-    cpfg = CartPoleStepGen(10, tf.keras.models.load_model(os.path.abspath(
-        os.path.join('.', 'models', 'autoencoder_L0024'))).encoder)
-    print(cpfg.__len__())
-    print(cpfg.__getitem__(0))
+    cpcg = CartPoleCombinedGen(1, batch_size = 4)
+    print(cpcg.__len__())
+    print(cpcg.__getitem__(0)[0][0][0].shape)
+    print(cpcg.__getitem__(0)[0][1])
+    print(cpcg.__getitem__(0)[1].shape)
