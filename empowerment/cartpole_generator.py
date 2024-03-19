@@ -107,8 +107,9 @@ class CartPoleCombinedGen(tf.keras.utils.Sequence):
         self.batch_size = batch_size
         self.normalize = normalize
 
-        self.env = gym.make('CartPole-v1', render_mode='rgb_array')
-        self.env.reset()
+        self.env = gym.make('CartPole-v1', render_mode = 'rgb_array')
+        self.options = {'low': -0.2, 'high': 0.2}
+        self.env.reset(options = self.options)
         self.frame_shape = self.env.render().shape
         self.last = self.get_frame()
 
@@ -145,7 +146,7 @@ class CartPoleCombinedGen(tf.keras.utils.Sequence):
                     outputs.append(np.stack([self.last, self.last],
                                             axis = 0))
 
-                observation, info = self.env.reset()  # Reborn
+                observation, info = self.env.reset(options = self.options)  # Reborn
                 self.last = self.get_frame()
             else:
                 input_images.append(self.last)
