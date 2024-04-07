@@ -166,8 +166,37 @@ class CartPoleCombinedGen(tf.keras.utils.Sequence):
     def __len__(self):
         return self.num_batches
 
+class CartPoleCombinedGenWithAlternateUniverses(tf.keras.utils.Sequence):
+    def __init__(self, num_batches, num_au = 32, batch_size = 32, normalize = True):
+        super(CartPoleCombinedGenWithAlternateUniverses, self).__init__()
+        assert(batch_size % num_au == 0)
+        self.aus = [CartPoleCombinedGen(num_batches,
+                                        batch_size = batch_size / num_au,
+                                        normalize = normalize) for i in range(num_au)]
+        self.num_batches = num_batches
+        self.batch_size = batch_size
+
+    def __getitem__(self, index):
+        input_images = []
+        input_actions = []
+        outputs = []
+
+        for au in self.aus:
+            (input_image, input_action), output = au.__getitem__(0)
+            input_images.append(input_image)
+            input_actions.append(input_action)
+            outputs.append(output)
+
+        assert(sum([images.shape[0] for images in input_images]) == self.batch_size)
+
+        return (np.concatenate(input_images), np.concatenate(input_actions)), np.concatenate(outputs)
+
+    def __len__(self):
+        return self.num_batches
+
 if __name__ == '__main__':
-    cpcg = CartPoleCombinedGen(1, batch_size = 4)
+    print('begin')
+    cpcg = CartPoleCombinedGenWithAlternateUniverses(1, num_au = 4, batch_size = 16)
     print(cpcg.__len__())
     print(cpcg.__getitem__(0)[0][0][0].shape)
     print(cpcg.__getitem__(0)[0][1])

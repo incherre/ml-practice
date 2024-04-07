@@ -13,7 +13,7 @@ image_save_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), 'data',
                  'combined_epoch_images'))
 
-val_data_x, val_data_y = cartpole_generator.CartPoleCombinedGen(
+val_data_x, val_data_y = cartpole_generator.CartPoleCombinedGenWithAlternateUniverses(
     1, batch_size = 128).__getitem__(0)
 
 model = combined_stm.CombinedStateTransitionModel(
@@ -28,7 +28,7 @@ model.compile(
                tf.keras.metrics.MeanSquaredLogarithmicError()])  # val_mean_squared_logarithmic_error
 try:
     history = model.fit(
-        cartpole_generator.CartPoleCombinedGen(50),
+        cartpole_generator.CartPoleCombinedGenWithAlternateUniverses(num_au = 64, batch_size = 64, 8),
         epochs = 1000,
         validation_data = (val_data_x, val_data_y),
         callbacks = [
@@ -36,11 +36,11 @@ try:
                 (val_data_x[0][:1], val_data_x[1][:1]), image_save_path),
             tf.keras.callbacks.ReduceLROnPlateau(
                 monitor = 'val_mean_squared_logarithmic_error',
-                patience = 4),
+                patience = 32),
             tf.keras.callbacks.EarlyStopping(
                 monitor = 'val_mean_squared_logarithmic_error',
                 min_delta = 0.0001,
-                patience = 8,
+                patience = 64,
                 restore_best_weights = True)],)
 except Exception as e:
     print(e)
